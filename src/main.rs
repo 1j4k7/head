@@ -1,4 +1,6 @@
-use std::fs;
+use std::fs::File;
+use std::io::BufReader;
+use std::io::BufRead;
 use std::process;
 use std::path::PathBuf;
 use clap::{Parser};
@@ -17,20 +19,27 @@ struct Cli {
 
 fn main() {
     let cli = Cli::parse();
-    let path = cli.path.unwrap_or_else(|| panic!());
+    let path = cli.path.unwrap_or_else(|| {
+        println!("No path provided");
+        process::exit(1);
+    });
     let num = cli.num.unwrap_or_else(|| 10);
 
-    let contents = fs::read_to_string(path).unwrap_or_else(|err| {
+    let file = File::open(path).unwrap_or_else(|err| {
         println!("Unable to read file: {err}");
         process::exit(1);
     });
+    let mut reader = BufReader::new(file);
 
-    let mut counter = 1;
-    for line in contents.lines() {
-        if counter > num {
+    let mut counter = 0;
+    let mut output = String::new();
+    while counter < num {
+        counter += 1;
+        let num_bytes = reader.read_line(&mut output)
+            .expect("Read failed");
+        if num_bytes == 0 {
             break;
         }
-        println!("{line}");
-        counter += 1;
     }
+    print!("{}", output)
 }
